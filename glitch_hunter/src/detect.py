@@ -44,7 +44,7 @@ def detect_incidents(df, combined_scores, threshold=0.8, n_consecutive=5):
         failure_idx = pd.Index([])
         
     if len(trigger_idx) == 0 and len(failure_idx) == 0:
-        return None
+        return None, None
         
     first_trigger = trigger_idx[0] if len(trigger_idx) > 0 else np.inf
     first_failure = failure_idx[0] if len(failure_idx) > 0 else np.inf

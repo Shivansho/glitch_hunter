@@ -115,7 +115,7 @@ def main():
                 for i, sig in enumerate(SIGNALS):
                     fig.add_trace(go.Scatter(x=df['timestamp'], y=df[sig], name=sig, line=dict(color="#1f77b4")), row=i+1, col=1)
                 fig.update_layout(height=800, template="plotly_dark", title_text="Signal Data")
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
             else:
                 video_events = None
                 if include_video and df is not None:
@@ -178,7 +178,7 @@ def main():
                         fig.add_vline(x=incident_time, line_width=2, line_dash="dash", line_color="red", row=i+1, col=1)
                         
                     fig.update_layout(height=800, template="plotly_dark", showlegend=False, margin=dict(l=20, r=20, t=40, b=20))
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width="stretch")
                     
                 with col2:
                     st.subheader("Timeline & Evidence")
