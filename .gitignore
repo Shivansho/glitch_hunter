@@ -1,0 +1,18 @@
+# Python Environment
+venv/
+__pycache__/
+*.pyc
+*.pyd
+*.dll
+*.map
+
+# Large Media and Kilo generated files
+.kilo/
+*.mp4
+
+# Data files
+*.csv 
+
+# OS / IDE
+.DS_Store
+.vscode/

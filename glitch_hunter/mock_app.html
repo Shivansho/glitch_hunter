@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Glitch Hunter</title>
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+    <style>
+        body { font-family: sans-serif; background-color: #0e1117; color: #fafafa; margin: 0; display: flex; height: 100vh; }
+        .sidebar { width: 300px; background-color: #262730; padding: 20px; }
+        .main { flex-grow: 1; padding: 30px; overflow-y: auto; }
+        h1 { font-weight: 500; font-size: 2.5rem; margin-top: 0; }
+        .banner { background-color: #1e2129; border-left: 5px solid #ff4b4b; padding: 20px; border-radius: 10px; display: flex; justify-content: space-between; margin-bottom: 30px; }
+        .metric-label { color: #a0aab5; font-size: 0.9rem; margin-bottom: 5px; }
+        .metric-val { color: #ff4b4b; font-size: 1.5rem; font-weight: bold; }
+        .tabs { display: flex; border-bottom: 1px solid #333; margin-bottom: 20px; }
+        .tab { padding: 10px 20px; cursor: pointer; border-bottom: 2px solid transparent; color: #a0aab5; }
+        .tab.active { border-bottom: 2px solid #ff4b4b; color: white; font-weight: bold; }
+        .chart-placeholder { background-color: #1e2129; height: 400px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #555; margin-bottom: 20px; font-style: italic; width: 100%;}
+        .evidence { color: #00cc66; font-weight: bold; font-size: 1.2rem; margin-bottom: 15px;}
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { text-align: left; padding: 10px; border-bottom: 1px solid #333; }
+        th { color: #a0aab5; font-size: 0.9rem; }
+        .btn { background-color: #333; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; }
+        .btn:hover { background-color: #444; }
+        .info { background-color: #1a2835; color: #9bb5ce; padding: 15px; border-radius: 5px; border-left: 5px solid #2e7bbd; white-space: pre-line; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>🕵️ AI Glitch Hunter</h2>
+        <div style="margin-top: 30px;">
+            <p style="font-size: 0.9rem; color: #a0aab5; margin-bottom: 10px;">Data Source</p>
+            <div><input type="radio" name="scenario" value="Scenario A (Speed)" checked> Scenario A (Speed)</div>
+            <div style="margin-top: 10px;"><input type="radio" name="scenario" value="Scenario B (Thermal)"> Scenario B (Thermal)</div>
+            <div style="margin-top: 10px;"><input type="radio" name="scenario" value="Scenario C (Noise)"> Scenario C (Noise)</div>
+            <div style="margin-top: 10px;"><input type="radio" name="scenario" value="Upload CSV" disabled> Upload CSV (Not impl)</div>
+        </div>
+        <div style="margin-top: 30px;">
+            <p style="font-size: 0.9rem; color: #a0aab5; margin-bottom: 10px;">Anomaly Score Threshold</p>
+            <input type="range" id="threshold" min="0" max="100" value="70" style="width: 100%;">
+            <div style="text-align: right; font-size: 0.8rem; color: #a0aab5;" id="threshold-label">0.70</div>
+        </div>
+    </div>
+    
+    <div class="main">
+        <h1>AI Glitch Hunter Dashboard</h1>
+        
+        <div class="tabs">
+            <div class="tab active">Investigation</div>
+            <div class="tab">Evaluation</div>
+        </div>
+        
+        <div class="banner">
+            <div>
+                <div class="metric-label">Incident Time</div>
+                <div class="metric-val" id="incident-time">...</div>
+            </div>
+            <div>
+                <div class="metric-label">Anomaly Score</div>
+                <div class="metric-val" id="anomaly-score">...</div>
+            </div>
+            <div>
+                <div class="metric-label">Earliest Deviation</div>
+                <div class="metric-val" id="earliest-deviation">...</div>
+            </div>
+            <div>
+                <div class="metric-label">Lead Time</div>
+                <div class="metric-val" id="lead-time">...</div>
+            </div>
+        </div>
+        
+        <div style="display: flex; gap: 30px;">
+            <div style="flex: 2; min-width: 0;">
+                <h3 style="margin-top: 0;">Multi-Signal Analysis</h3>
+                <div id="chart-placeholder" class="chart-placeholder">Loading chart...</div>
+            </div>
+            <div style="flex: 1; min-width: 0;">
+                <h3 style="margin-top: 0;">Timeline & Evidence</h3>
+                <div class="evidence">Evidence Level: <span id="evidence-level" style="color:#00cc66">...</span></div>
+                
+                <h4 style="margin-top: 20px; margin-bottom: 10px; color: #ddd;">Candidate Precursors</h4>
+                <div style="overflow-x: auto;">
+                    <table id="candidates-table">
+                        <tr><th>Source</th><th>Lead(s)</th><th>Score</th><th>Prox</th><th>Mag</th><th>Pers</th><th>Cross</th></tr>
+                    </table>
+                </div>
+                
+                <h4 style="margin-top: 20px; margin-bottom: 10px; color: #ddd;">Incident Timeline</h4>
+                <div id="incident-timeline" style="font-size: 0.9rem; line-height: 1.5; margin-bottom: 20px;">
+                    ...
+                </div>
+                
+                <h4 style="margin-top: 20px; margin-bottom: 10px; color: #ddd;">Explanation</h4>
+                <div class="info" id="explanation-text">
+                    ...
+                </div>
+                
+                <div style="margin-top: 20px;">
+                    <button class="btn">Download JSON Report</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentReport = null;
+        
+        async function fetchData() {
+            const scenario = document.querySelector('input[name="scenario"]:checked').value;
+            const threshold = document.getElementById("threshold").value;
+            
+            document.getElementById("threshold-label").innerText = (threshold / 100).toFixed(2);
+            
+            document.getElementById("incident-time").innerText = "Loading...";
+            document.getElementById("anomaly-score").innerText = "...";
+            document.getElementById("earliest-deviation").innerText = "...";
+            document.getElementById("lead-time").innerText = "...";
+            document.getElementById("evidence-level").innerText = "...";
+            
+            try {
+                const res = await fetch(`/api/analyze?scenario=${encodeURIComponent(scenario)}&threshold=${threshold/100}`);
+                const data = await res.json();
+                
+                if (data.incident_detected) {
+                    document.getElementById("incident-time").innerText = data.incident_time;
+                    document.getElementById("anomaly-score").innerText = data.anomaly_score.toFixed(2);
+                    document.getElementById("earliest-deviation").innerText = data.earliest_deviation || "N/A";
+                    document.getElementById("lead-time").innerText = data.lead_time.toFixed(1) + "s";
+                    
+                    document.getElementById("evidence-level").innerText = data.evidence_level;
+                    let color = "#ffcc00";
+                    if (data.evidence_level === "STRONG") color = "#00cc66";
+                    else if (data.evidence_level === "INSUFFICIENT") color = "#ff4b4b";
+                    document.getElementById("evidence-level").style.color = color;
+                    
+                    let tableHTML = "<tr><th>Source</th><th>Lead(s)</th><th>Score</th><th>Prox</th><th>Mag</th><th>Pers</th><th>Cross</th></tr>";
+                    data.candidates.forEach(c => {
+                        tableHTML += `<tr>
+                            <td>${c.source}</td>
+                            <td>${c.lead_time.toFixed(1)}</td>
+                            <td>${c.score.toFixed(2)}</td>
+                            <td>${c.components.proximity.toFixed(2)}</td>
+                            <td>${c.components.magnitude.toFixed(2)}</td>
+                            <td>${c.components.persistence.toFixed(2)}</td>
+                            <td>${c.components.cross_agreement.toFixed(2)}</td>
+                        </tr>`;
+                    });
+                    document.getElementById("candidates-table").innerHTML = tableHTML;
+                    
+                    let timelineHTML = "";
+                    let t0 = new Date(data.candidates.length > 0 ? data.candidates[0].onset_time : data.incident_time).getTime();
+                    data.candidates.forEach(c => {
+                        let offset = (new Date(c.onset_time).getTime() - t0) / 1000;
+                        timelineHTML += `<strong>+${Math.round(offset)}s</strong>: ${c.source} deviated<br>`;
+                    });
+                    let incOffset = (new Date(data.incident_time).getTime() - t0) / 1000;
+                    timelineHTML += `<strong>+${Math.round(incOffset)}s</strong>: <strong>INCIDENT DETECTED</strong>`;
+                    document.getElementById("incident-timeline").innerHTML = timelineHTML;
+                    
+                    document.getElementById("explanation-text").innerText = data.explanation;
+                    currentReport = data.report;
+                    
+                } else {
+                    document.getElementById("incident-time").innerText = "None";
+                    document.getElementById("anomaly-score").innerText = "N/A";
+                    document.getElementById("earliest-deviation").innerText = "N/A";
+                    document.getElementById("lead-time").innerText = "N/A";
+                    document.getElementById("evidence-level").innerText = "N/A";
+                    document.getElementById("candidates-table").innerHTML = "<tr><th>Source</th><th>Lead(s)</th><th>Score</th><th>Prox</th><th>Mag</th><th>Pers</th><th>Cross</th></tr>";
+                    document.getElementById("incident-timeline").innerHTML = "No incident detected";
+                    document.getElementById("explanation-text").innerText = "No incident detected.";
+                    currentReport = null;
+                }
+                
+                // Plotly traces
+                if (data.plot_data && data.plot_data.traces) {
+                    let layout = {
+                        paper_bgcolor: '#1e2129',
+                        plot_bgcolor: '#1e2129',
+                        font: { color: '#a0aab5' },
+                        margin: { t: 40, l: 40, r: 20, b: 40 },
+                        xaxis: { showgrid: false },
+                        yaxis: { showgrid: true, gridcolor: '#333' },
+                        showlegend: false
+                    };
+                    
+                    if (data.incident_detected) {
+                        layout.shapes = [{
+                            type: 'line',
+                            x0: data.incident_time,
+                            y0: 0,
+                            x1: data.incident_time,
+                            y1: 1,
+                            yref: 'paper',
+                            line: {
+                                color: 'red',
+                                width: 2,
+                                dash: 'dash'
+                            }
+                        }];
+                    }
+                    
+                    Plotly.newPlot('chart-placeholder', data.plot_data.traces, layout, {responsive: true});
+                }
+                
+            } catch (e) {
+                console.error(e);
+                alert("Failed to fetch data.");
+            }
+        }
+        
+        document.querySelectorAll('input[name="scenario"]').forEach(el => el.addEventListener('change', fetchData));
+        document.getElementById('threshold').addEventListener('change', fetchData);
+        
+        fetchData();
+    </script>
+</body>
+</html>

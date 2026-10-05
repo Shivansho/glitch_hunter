@@ -1,0 +1,20 @@
+{
+    "incident_A": {
+        "initiating_signal": "conveyor_speed",
+        "onset_time_str": "2024-01-06 08:03:20",
+        "onset_idx": 200,
+        "description": "speed fluctuates at t0 \u2192 vibration t0+23s \u2192 temperature t0+40s \u2192 current spike t0+46s \u2192 failure t0+49s"
+    },
+    "incident_B": {
+        "initiating_signal": "temperature",
+        "onset_time_str": "2024-01-07 08:03:20",
+        "onset_idx": 200,
+        "description": "temperature creeps up \u2192 pressure drops \u2192 current spikes \u2192 failure"
+    },
+    "incident_C": {
+        "initiating_signal": null,
+        "onset_time_str": null,
+        "onset_idx": null,
+        "description": "noise only: random spikes in pressure, NO real chain"
+    }
+}
